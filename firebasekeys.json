@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "robbit-ramadan",
+  "private_key_id": "8bbf99a42a6cfda884560777f45af231da08ad4a",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDaljj5s6XU31Wi\nS3mlNcSYP8O/cIMJDLx4YxmT4gjx6pJ2CPbqjQa5vNI3BsIJu/L0laIGJ7vUUzi2\n+CwpuOLwq/l6tBBVY0ki6zjyOmGpN73dythD4I+5yLwJTU9HTnZ8FohW1/w9tw9i\n0qKuy0OvrppWnPo19FRuDbn8NcrGZknHqM9Zs7nGzx8DIQU1d59PG8THdIlozUvT\nR3YuY/AYvf7MTB4GTrHpSxolhWQsake3a20X7+/U+z72Tm4cvVSPl7C00uOmzSMB\n2BuxlxJAD/jIecT7iEaTBJFjcdWJUQy+IWLcT8TPrZkqmtkb+Ax+7AbNfFjgxbTf\npuW+Ba3lAgMBAAECgf9LkxDhT+B9heHieZagwS8x8bIc3x8C39vjdBBYd1arxRNy\nRH9emP1k9i3DjrprWTU1RHuHjoT2YVJ+0+MbsZfs84i0jpLHe4a3GjZMND46gf/f\nBIz0hIfXdYoWTIgFvq7/pEI1UqVJ5GGsB9I3act6WLwgXez8rzNDNLpR6tsw+1An\nKZqLkXl3qXz38R6ZF0h2IUiNRjcg7UeHeY6rRqUYAiHmLxLW/fldfC9ue61SNaY7\nqHv7jlQq4WOrEw2vCRclEnDIqG6UcjDeEiC67hobqXF8BFZeTTMik/q7+t9GbEyo\nua0fONyhJVvzifd6dBlL8UPBs2jRzukETTbEOEUCgYEA8ggqKD+WQaPAW7vMws12\n0FxzRQH88AS+iLoa4aWehlgB19YeDC7i/qmpBafpTvWhCBtFYhVNn1Tfdahz/KuE\njTgaYUjkRi9iwERyICHejpEr6lMxDDyNgtxZRxby+j3Eegbdgktq7K5bcvgr6rM3\nwXoU1KAsBXftHfypAa+qe78CgYEA5zOsu75ZknMyby9lnZdHJVcUUO/AtVdewkse\nQRPDF1BLuhfoimnm75ib3DxNnNFvGCbL2YfR8KIljVtsYHd0wYzAhJtWf8qd0xUU\n0bd3gWM3n62KqsbmrMpmov4Bwyl3TtzsAo7wNAUlk5DS65hylq8cBBBMPwIWG+yI\nwrG0j1sCgYAbcmGVfuCDQRanUHy/+pzmtBU+ViNg9KjGyJQT0rxPb9uFpnpx1z9W\nsdbBFXGXyrMgQDd2EARldTKCHUBJ/wlhGmOjdKiubOE9/IUUr8KVWFEqmZSOVq+V\nj3dwYGHdjvOhAvZLuFG/1WX5e7s/OmOwRS/njOJxHFB/fg+MaWdj8QKBgQDBWE99\necPCWx+0J3jc/yN6MIZG4RjRDc2qwdL9LR+bIYUSjOfkyIddmsvMs4lcOTCki90x\nfwmsKI0q12ecjIlRSvm8a4M8vx6Y5SpR7xG7XFOp7yDljAxgN6r5Z13l7YlepBWi\nVhK+DgfMjfI1H3nEVZAiPdblYkNG+tmrp5yNvQKBgQCFAnOvUE+tlRB0WR0ECBLz\nKMVSCH9a3U3urGQ8OO9tGChvv+4Fohq0UIyO+kAew+2LQGv2DcwtIeqyivNLqh7F\nF5mrmUbQZRHdIQwTTxvA0I++r5gGlqnqbKqrHSWyoo4EKgWqdunYQXl7dDizwAAw\nKdMBkDLhSwoxCgFmWb+h+w==\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@robbit-ramadan.iam.gserviceaccount.com",
+  "client_id": "109488754696281673042",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40robbit-ramadan.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

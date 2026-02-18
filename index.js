@@ -6,15 +6,28 @@ require('dotenv').config();
 
 // Initialize Firebase Admin
 console.log('Initializing Firebase...');
+const serviceAccountPath = path.join(__dirname, 'firebasekeys.json');
+
 try {
-    const serviceAccount = require('./serviceAccountKey.json');
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
-    console.log('Firebase initialized.');
+    if (require('fs').existsSync(serviceAccountPath)) {
+        console.log('Using firebasekeys.json for initialization...');
+        const serviceAccount = require(serviceAccountPath);
+        console.log('Key Project ID:', serviceAccount.project_id);
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            projectId: serviceAccount.project_id
+        });
+    } else {
+        console.log('serviceAccountKey.json not found, attempting to use GOOGLE_APPLICATION_CREDENTIALS...');
+        admin.initializeApp();
+    }
+    console.log('Firebase initialized. App Name:', admin.app().name);
+    console.log('Configured Project ID:', admin.app().options.projectId);
 } catch (e) {
-    console.error("Firebase Admin initialization failed:", e.message);
-    admin.initializeApp();
+    console.error("Firebase Admin initialization failed!");
+    console.error("Error Name:", e.name);
+    console.error("Error Message:", e.message);
+    process.exit(1); // Exit if we can't initialize DB
 }
 
 const db = admin.firestore();
