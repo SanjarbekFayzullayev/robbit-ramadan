@@ -6,30 +6,45 @@ require('dotenv').config();
 
 // Initialize Firebase Admin
 console.log('Initializing Firebase...');
-const serviceAccountPath = path.join(__dirname, 'firebasekeys.json');
 
-try {
-    if (require('fs').existsSync(serviceAccountPath)) {
-        console.log('Using firebasekeys.json for initialization...');
-        const serviceAccount = require(serviceAccountPath);
-        console.log('Key Project ID:', serviceAccount.project_id);
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-            projectId: serviceAccount.project_id
-        });
-    } else {
-        console.log('serviceAccountKey.json not found, attempting to use GOOGLE_APPLICATION_CREDENTIALS...');
-        admin.initializeApp();
+const possibleKeys = [
+    process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    path.join(__dirname, 'firebasekeys.json'),
+    path.join(__dirname, 'serviceAccountKey.json'),
+    path.join(__dirname, '..', 'firebasekeys.json'),
+    path.join(__dirname, '..', 'serviceAccountKey.json')
+];
+
+let initialized = false;
+for (const keyPath of possibleKeys) {
+    if (keyPath && require('fs').existsSync(keyPath)) {
+        console.log(`Using credentials from: ${keyPath}`);
+        try {
+            const serviceAccount = require(keyPath);
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount),
+                projectId: serviceAccount.project_id
+            });
+            initialized = true;
+            break;
+        } catch (e) {
+            console.error(`Failed to load key from ${keyPath}:`, e.message);
+        }
     }
-    console.log('Firebase initialized. App Name:', admin.app().name);
-    console.log('Configured Project ID:', admin.app().options.projectId);
-} catch (e) {
-    console.error("Firebase Admin initialization failed!");
-    console.error("Error Name:", e.name);
-    console.error("Error Message:", e.message);
-    process.exit(1); // Exit if we can't initialize DB
 }
 
+if (!initialized) {
+    console.log('No specific key file found, attempting default initialization...');
+    try {
+        admin.initializeApp();
+        initialized = true;
+    } catch (e) {
+        console.error("Firebase Admin initialization failed completely!");
+        process.exit(1);
+    }
+}
+
+console.log('Firebase initialized. Project ID:', admin.app().options.projectId);
 const db = admin.firestore();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
