@@ -42,83 +42,41 @@ const WEB_APP_URL = process.env.WEB_APP_URL || 'https://robbit-ramadan.web.app';
 const ADMIN_ID = 1398926724;
 
 // ==========================================
-// 2. DYNAMIC STATE (from Firestore)
+// 2. NOTIFICATION STATE (from Firestore)
 // ==========================================
-let dynamicButtons = [];
 let notificationSettings = {
-    morning: { enabled: true, hour: 5, minute: 0, message: "🌙 Assalomu alaykum! Saharlik vaqti bo'ldi. Bugungi kuningiz xayrli va ibodatlarga boy bo'lsin.\n\nKundalikni to'ldirishni unutmang!" },
-    evening: { enabled: true, hour: 20, minute: 0, message: "✨ Kun yakunlandi. Bugungi amallaringizni sarhisob qilish vaqti keldi.\n\nKundalikni to'ldirib, o'zingizni hisob-kitob qiling." }
+    morning: {
+        enabled: true,
+        hour: 5,
+        minute: 0,
+        message: "🌙 Assalomu alaykum! Saharlik vaqti bo'ldi. Bugungi kuningiz xayrli va ibodatlarga boy bo'lsin.\n\nKundalikni to'ldirishni unutmang!"
+    },
+    evening: {
+        enabled: true,
+        hour: 20,
+        minute: 0,
+        message: "✨ Kun yakunlandi. Bugungi amallaringizni sarhisob qilish vaqti keldi.\n\nKundalikni to'ldirib, o'zingizni hisob-kitob qiling."
+    }
 };
-let dailyContent = {}; // { "1": { text: "...", type: "hadith" }, ... }
 let lastMorningSent = null;
 let lastEveningSent = null;
 
-// Inline keyboard (message-based)
+// ==========================================
+// 3. KEYBOARDS
+// ==========================================
 const mainInlineKeyboard = Markup.inlineKeyboard([
     [Markup.button.webApp("📖 Kundalikni ochish", WEB_APP_URL)]
 ]);
 
-// Build dynamic reply keyboard from Firestore buttons
-function buildReplyKeyboard() {
-    if (dynamicButtons.length === 0) {
-        // Default fallback
-        return Markup.keyboard([
-            [Markup.button.webApp("📖 Kundalikni ochish", WEB_APP_URL)],
-            ["🌙 Saharlik duosi", "✨ Iftorlik duosi"],
-            ["✍️ Taklif va e'tirozlar", "ℹ️ Bot haqida"]
-        ]).resize();
-    }
-
-    const rows = [];
-    let currentRow = [];
-
-    for (const btn of dynamicButtons) {
-        if (btn.type === 'webapp') {
-            // WebApp buttons must be alone in a row
-            if (currentRow.length > 0) {
-                rows.push(currentRow);
-                currentRow = [];
-            }
-            rows.push([Markup.button.webApp(btn.text, btn.url || WEB_APP_URL)]);
-        } else {
-            currentRow.push(btn.text);
-            if (currentRow.length >= 2) {
-                rows.push(currentRow);
-                currentRow = [];
-            }
-        }
-    }
-    if (currentRow.length > 0) rows.push(currentRow);
-
-    return Markup.keyboard(rows).resize();
-}
+const fullMenuKeyboard = Markup.keyboard([
+    [Markup.button.webApp("📖 Kundalikni ochish", WEB_APP_URL)],
+    ["🌙 Saharlik duosi", "✨ Iftorlik duosi"],
+    ["✍️ Taklif va e'tirozlar", "ℹ️ Bot haqida"]
+]).resize();
 
 // ==========================================
-// 3. FIRESTORE LISTENERS (Real-time)
+// 4. FIRESTORE LISTENER — Notification Settings
 // ==========================================
-
-// Listen for button changes
-db.collection('settings').doc('buttons').onSnapshot(snap => {
-    if (snap.exists) {
-        const data = snap.data();
-        dynamicButtons = data.buttons || [];
-        console.log(`🔄 Buttons updated: ${dynamicButtons.length} buttons`);
-    } else {
-        // Create default buttons
-        const defaultButtons = [
-            { text: "📖 Kundalikni ochish", type: "webapp", url: WEB_APP_URL },
-            { text: "🌙 Saharlik duosi", type: "text" },
-            { text: "✨ Iftorlik duosi", type: "text" },
-            { text: "✍️ Taklif va e'tirozlar", type: "text" },
-            { text: "ℹ️ Bot haqida", type: "text" }
-        ];
-        db.collection('settings').doc('buttons').set({ buttons: defaultButtons })
-            .then(() => console.log('📋 Default buttons created'))
-            .catch(e => console.error('Default buttons error:', e.message));
-    }
-}, err => console.error('Buttons listener error:', err.message));
-
-// Listen for notification settings
 db.collection('settings').doc('notifications').onSnapshot(snap => {
     if (snap.exists) {
         const data = snap.data();
@@ -126,30 +84,21 @@ db.collection('settings').doc('notifications').onSnapshot(snap => {
         if (data.evening) notificationSettings.evening = { ...notificationSettings.evening, ...data.evening };
         console.log(`🔄 Notifications updated: morning=${notificationSettings.morning.hour}:${String(notificationSettings.morning.minute).padStart(2, '0')}, evening=${notificationSettings.evening.hour}:${String(notificationSettings.evening.minute).padStart(2, '0')}`);
     } else {
-        // Create default notification settings
+        // Create defaults on first run
         db.collection('settings').doc('notifications').set(notificationSettings)
             .then(() => console.log('⏰ Default notification settings created'))
             .catch(e => console.error('Default notifications error:', e.message));
     }
 }, err => console.error('Notifications listener error:', err.message));
 
-// Listen for daily content
-db.collection('daily_content').onSnapshot(snap => {
-    dailyContent = {};
-    snap.forEach(doc => {
-        dailyContent[doc.id] = doc.data();
-    });
-    console.log(`🔄 Daily content loaded: ${Object.keys(dailyContent).length} items`);
-}, err => console.error('Daily content listener error:', err.message));
-
 // ==========================================
-// 4. HEALTH CHECK
+// 5. HEALTH CHECK
 // ==========================================
 async function healthCheck() {
     try {
         const testRef = db.collection('settings').doc('ramadan');
-        const doc = await testRef.get();
-        if (!doc.exists) {
+        const docSnap = await testRef.get();
+        if (!docSnap.exists) {
             await testRef.set({ startDate: '2026-02-18', endDate: '2026-03-20' });
             console.log('✅ Default ramadan settings created.');
         }
@@ -165,7 +114,7 @@ async function healthCheck() {
 }
 
 // ==========================================
-// 5. HELPER: Get current Ramadan day
+// 6. HELPER: Ramadan Day
 // ==========================================
 function getCurrentRamadanDay(startDate) {
     const now = new Date();
@@ -176,14 +125,12 @@ function getCurrentRamadanDay(startDate) {
 }
 
 // ==========================================
-// 6. BOT COMMANDS
+// 7. BOT COMMANDS
 // ==========================================
-
 bot.telegram.setMyCommands([
     { command: 'start', description: 'Botni ishga tushirish' },
     { command: 'menu', description: 'Asosiy menyuni ko\'rsatish' },
     { command: 'status', description: 'Bot holatini tekshirish' },
-    { command: 'hadis', description: 'Bugungi hadis/duo' },
     { command: 'streak', description: 'Ketma-ketlik hisobingiz' }
 ]).then(() => console.log('📋 Bot commands updated.'))
     .catch(e => console.error('⚠️ Failed to set commands:', e.message));
@@ -202,10 +149,8 @@ bot.start(async (ctx) => {
             chat_id: ctx.chat.id
         }, { merge: true });
 
-        // Send "Bismillah!" with dynamic keyboard
-        await ctx.reply("Bismillah!", buildReplyKeyboard());
+        await ctx.reply("Bismillah!", fullMenuKeyboard);
 
-        // Welcome message with inline button
         await ctx.reply(
             `Assalomu alaykum, ${user.first_name}!\n\nRamazon kundaligiga xush kelibsiz. Bu bot orqali siz kundalik amallaringizni kuzatib borishingiz mumkin.`,
             mainInlineKeyboard
@@ -220,7 +165,7 @@ bot.start(async (ctx) => {
 
 // /menu
 bot.command('menu', (ctx) => {
-    ctx.reply("Asosiy menyu:", buildReplyKeyboard())
+    ctx.reply("Asosiy menyu:", fullMenuKeyboard)
         .catch(e => console.error('menu error:', e.message));
 });
 
@@ -230,36 +175,14 @@ bot.command('status', (ctx) => {
         .catch(e => console.error('status error:', e.message));
 });
 
-// /hadis — show today's hadith
-bot.command('hadis', async (ctx) => {
-    try {
-        const settingsDoc = await db.collection('settings').doc('ramadan').get();
-        const startDate = settingsDoc.exists ? settingsDoc.data().startDate : '2026-02-18';
-        const day = getCurrentRamadanDay(startDate);
-        const content = dailyContent[day.toString()];
-
-        if (content && content.text) {
-            await ctx.reply(
-                `📖 *${day}-kun ${content.type === 'hadith' ? 'hadisi' : 'duosi'}:*\n\n${content.text}`,
-                { parse_mode: 'Markdown' }
-            );
-        } else {
-            await ctx.reply(`📖 Bugun (${day}-kun) uchun maxsus kontent hali qo'shilmagan.`);
-        }
-    } catch (e) {
-        console.error('hadis error:', e.message);
-        ctx.reply("⚠️ Xatolik yuz berdi.").catch(() => { });
-    }
-});
-
-// /streak — show user's streak
+// /streak
 bot.command('streak', async (ctx) => {
     try {
         const userId = ctx.from.id.toString();
         const userDataDoc = await db.collection('user_data').doc(userId).get();
 
         if (!userDataDoc.exists) {
-            await ctx.reply("📊 Siz hali kundalikni to'ldirishni boshlamadingiz. /start buyrug'ini yuboring.");
+            await ctx.reply("📊 Siz hali kundalikni to'ldirishni boshlamadingiz.\n\nBoshlash uchun quyidagi tugmani bosing:", mainInlineKeyboard);
             return;
         }
 
@@ -269,8 +192,8 @@ bot.command('streak', async (ctx) => {
         let totalGood = 0;
         let totalBad = 0;
 
-        // Count filled days and calculate streak
-        for (let i = 30; i >= 1; i--) {
+        // Count filled days
+        for (let i = 1; i <= 30; i++) {
             const dayData = data[`day${i}`];
             if (dayData) {
                 const goodCount = (dayData.good || []).filter(v => v).length;
@@ -283,20 +206,15 @@ bot.command('streak', async (ctx) => {
             }
         }
 
-        // Calculate consecutive streak from latest day
+        // Consecutive streak from current day backwards
         const settingsDoc = await db.collection('settings').doc('ramadan').get();
         const startDate = settingsDoc.exists ? settingsDoc.data().startDate : '2026-02-18';
         const currentDay = getCurrentRamadanDay(startDate);
 
         for (let i = currentDay; i >= 1; i--) {
             const dayData = data[`day${i}`];
-            if (dayData) {
-                const goodCount = (dayData.good || []).filter(v => v).length;
-                if (goodCount > 0) {
-                    streak++;
-                } else {
-                    break;
-                }
+            if (dayData && (dayData.good || []).filter(v => v).length > 0) {
+                streak++;
             } else {
                 break;
             }
@@ -318,15 +236,13 @@ bot.command('streak', async (ctx) => {
         await ctx.reply(msg, { parse_mode: 'Markdown' });
     } catch (e) {
         console.error('streak error:', e.message);
-        ctx.reply("⚠️ Xatolik yuz berdi.").catch(() => { });
+        try { await ctx.reply("⚠️ Xatolik yuz berdi."); } catch (_) { }
     }
 });
 
 // ==========================================
-// 7. TEXT HANDLERS
+// 8. TEXT HANDLERS
 // ==========================================
-
-// Static text handlers (always available even with dynamic buttons)
 bot.hears("📖 Kundalikni ochish", (ctx) => {
     ctx.reply("Ramazon kundaligini ochish uchun quyidagi tugmani bosing:", mainInlineKeyboard)
         .catch(e => console.error('diary error:', e.message));
@@ -359,43 +275,6 @@ bot.hears("ℹ️ Bot haqida", (ctx) => {
 });
 
 // ==========================================
-// 8. DYNAMIC BUTTON HANDLER (URL type)
-// ==========================================
-// Handle dynamic URL buttons — they send text, we respond with the URL
-bot.on('text', async (ctx, next) => {
-    const text = ctx.message.text;
-
-    // Check if it matches a dynamic URL button
-    const urlButton = dynamicButtons.find(b => b.type === 'url' && b.text === text);
-    if (urlButton && urlButton.url) {
-        try {
-            await ctx.reply(
-                `🔗 ${urlButton.text}`,
-                Markup.inlineKeyboard([
-                    [Markup.button.url(urlButton.text, urlButton.url)]
-                ])
-            );
-        } catch (e) {
-            console.error('Dynamic URL button error:', e.message);
-        }
-        return;
-    }
-
-    // Check if it matches a dynamic text button with custom response
-    const textButton = dynamicButtons.find(b => b.type === 'text_custom' && b.text === text);
-    if (textButton && textButton.response) {
-        try {
-            await ctx.reply(textButton.response, { parse_mode: 'Markdown' });
-        } catch (e) {
-            console.error('Dynamic text button error:', e.message);
-        }
-        return;
-    }
-
-    return next();
-});
-
-// ==========================================
 // 9. FEEDBACK & ADMIN REPLY
 // ==========================================
 bot.on('message', async (ctx) => {
@@ -408,10 +287,10 @@ bot.on('message', async (ctx) => {
         if (user.id === ADMIN_ID && ctx.message.reply_to_message) {
             const replyTo = ctx.message.reply_to_message;
             const feedbackRef = db.collection('feedback_map').doc(replyTo.message_id.toString());
-            const doc = await feedbackRef.get();
+            const feedbackDoc = await feedbackRef.get();
 
-            if (doc.exists) {
-                const originalUser = doc.data();
+            if (feedbackDoc.exists) {
+                const originalUser = feedbackDoc.data();
                 try {
                     await bot.telegram.sendMessage(originalUser.chat_id, `💌 *Admindan javob keldi:*\n\n${text}`, { parse_mode: 'Markdown' });
                     await ctx.reply("✅ Javobingiz foydalanuvchiga yuborildi.");
@@ -425,9 +304,7 @@ bot.on('message', async (ctx) => {
 
         // Regular user feedback
         const knownTexts = ["📖 Kundalikni ochish", "🌙 Saharlik duosi", "✨ Iftorlik duosi", "✍️ Taklif va e'tirozlar", "ℹ️ Bot haqida"];
-        const dynamicTexts = dynamicButtons.map(b => b.text);
-        const allKnown = [...knownTexts, ...dynamicTexts];
-        const isCommand = text.startsWith('/') || allKnown.includes(text);
+        const isCommand = text.startsWith('/') || knownTexts.includes(text);
 
         if (!isCommand) {
             try {
@@ -455,7 +332,7 @@ bot.on('message', async (ctx) => {
 });
 
 // ==========================================
-// 10. NOTIFICATION SCHEDULER (interval-based)
+// 10. NOTIFICATION SCHEDULER
 // ==========================================
 async function sendNotification(type) {
     const settings = notificationSettings[type];
@@ -466,26 +343,10 @@ async function sendNotification(type) {
         const usersSnapshot = await db.collection('users').get();
         let sent = 0, failed = 0;
 
-        // Get daily hadith to include
-        let hadithText = '';
-        try {
-            const settingsDoc = await db.collection('settings').doc('ramadan').get();
-            const startDate = settingsDoc.exists ? settingsDoc.data().startDate : '2026-02-18';
-            const day = getCurrentRamadanDay(startDate);
-            const content = dailyContent[day.toString()];
-            if (content && content.text) {
-                hadithText = `\n\n📖 *${day}-kun ${content.type === 'hadith' ? 'hadisi' : 'duosi'}:*\n${content.text}`;
-            }
-        } catch (e) {
-            console.error('Hadith load error:', e.message);
-        }
-
-        const fullMessage = settings.message + hadithText;
-
-        for (const doc of usersSnapshot.docs) {
-            const user = doc.data();
+        for (const userDoc of usersSnapshot.docs) {
+            const user = userDoc.data();
             try {
-                await bot.telegram.sendMessage(user.chat_id, fullMessage, {
+                await bot.telegram.sendMessage(user.chat_id, settings.message, {
                     parse_mode: 'Markdown',
                     ...mainInlineKeyboard
                 });
@@ -501,11 +362,11 @@ async function sendNotification(type) {
     }
 }
 
-// Check every minute if it's time to send notifications
+// Check every minute
 setInterval(() => {
     const now = new Date();
-    // Convert to Tashkent time (UTC+5)
-    const tashkentOffset = 5 * 60; // minutes
+    // Tashkent = UTC+5
+    const tashkentOffset = 5 * 60;
     const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
     const tashkentMinutes = (utcMinutes + tashkentOffset) % (24 * 60);
     const tashkentHour = Math.floor(tashkentMinutes / 60);
@@ -513,7 +374,7 @@ setInterval(() => {
 
     const today = `${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}`;
 
-    // Morning notification
+    // Morning
     if (notificationSettings.morning.enabled &&
         tashkentHour === notificationSettings.morning.hour &&
         tashkentMinute === notificationSettings.morning.minute &&
@@ -522,7 +383,7 @@ setInterval(() => {
         sendNotification('morning');
     }
 
-    // Evening notification
+    // Evening
     if (notificationSettings.evening.enabled &&
         tashkentHour === notificationSettings.evening.hour &&
         tashkentMinute === notificationSettings.evening.minute &&
@@ -530,7 +391,7 @@ setInterval(() => {
         lastEveningSent = today;
         sendNotification('evening');
     }
-}, 60 * 1000); // Every minute
+}, 60 * 1000);
 
 // ==========================================
 // 11. BROADCAST LISTENER
@@ -616,7 +477,7 @@ async function startBot() {
         process.exit(1);
     }
 
-    // Wait a moment for Firestore listeners to populate
+    // Wait for Firestore listeners
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     console.log('🚀 Launching bot...');
@@ -626,7 +487,6 @@ async function startBot() {
         console.log('╔════════════════════════════════════════╗');
         console.log('║   🤖 Bot is running! ✅                ║');
         console.log('║   📊 Project: ' + (admin.app().options.projectId || '').padEnd(24) + '║');
-        console.log('║   🔘 Buttons: ' + String(dynamicButtons.length).padEnd(24) + '║');
         console.log('║   ⏰ Morning: ' + `${notificationSettings.morning.hour}:${String(notificationSettings.morning.minute).padStart(2, '0')}`.padEnd(24) + '║');
         console.log('║   🌙 Evening: ' + `${notificationSettings.evening.hour}:${String(notificationSettings.evening.minute).padStart(2, '0')}`.padEnd(24) + '║');
         console.log('╚════════════════════════════════════════╝');
