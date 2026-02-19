@@ -25,6 +25,7 @@ try {
     process.exit(1);
 }
 
+
 try {
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
