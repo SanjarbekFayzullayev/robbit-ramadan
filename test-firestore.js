@@ -9,7 +9,7 @@ try {
     console.log('Using Application Default Credentials...');
     admin.initializeApp({
         credential: admin.credential.applicationDefault(),
-        projectId: 'robbit-ramadan'
+        projectId: 'robbit-ramadan-bot'
     });
 
     const db = admin.firestore();
