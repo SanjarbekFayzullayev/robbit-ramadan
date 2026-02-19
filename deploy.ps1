@@ -1,34 +1,31 @@
-# Bot Server'ni serverga yuklash
+# Ramadan Bot — Serverga deploy
 # Foydalanish: .\deploy.ps1
+# Bu FAQAT ramadan-bot'ga tegadi, robbit-bot'ga ta'sir qilmaydi!
 
-$serverIP = "157.173.114.153"
-$serverUser = "root"
-$serverPath = "/root/robbit_new/robbit-ramadan/bot-server"
+$server = "root@157.173.114.153"
+$remotePath = "/root/bots/ramadan-bot"
 
-Write-Host "🚀 Bot-server fayllarini serverga yuklash..." -ForegroundColor Green
+Write-Host ""
+Write-Host "===== Ramadan Bot Deploy =====" -ForegroundColor Cyan
+Write-Host "Server: $server" -ForegroundColor Gray
+Write-Host "Papka:  $remotePath" -ForegroundColor Gray
+Write-Host ""
 
-# Faqat kerakli fayllar
-$files = @(
-    "index.js",
-    "package.json",
-    "package-lock.json",
-    ".env",
-    "firebasekeys.json"
-)
+# 1. Fayllarni yuborish
+Write-Host "[1/2] Fayllar yuborilmoqda... (parol kiriting)" -ForegroundColor Yellow
+scp index.js package.json package-lock.json .env firebasekeys.json "${server}:${remotePath}/"
 
-foreach ($file in $files) {
-    if (Test-Path $file) {
-        Write-Host "  📤 $file yuborilmoqda..." -ForegroundColor Yellow
-        scp "$file" "${serverUser}@${serverIP}:${serverPath}/${file}"
-    } else {
-        Write-Host "  ⚠️ $file topilmadi, o'tkazildi" -ForegroundColor Red
-    }
+if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Host "Papka yo'q bo'lishi mumkin. Yaratib qayta yuboraman..." -ForegroundColor Red
+    ssh $server "mkdir -p $remotePath"
+    scp index.js package.json package-lock.json .env firebasekeys.json "${server}:${remotePath}/"
 }
 
+# 2. Restart
 Write-Host ""
-Write-Host "📦 Serverda npm install va restart..." -ForegroundColor Green
-ssh "${serverUser}@${serverIP}" "cd ${serverPath} && npm install && pm2 restart 1"
+Write-Host "[2/2] Serverda restart... (parol kiriting)" -ForegroundColor Yellow
+ssh $server "cd $remotePath && npm install --production 2>&1 && pm2 restart ramadan-bot 2>/dev/null || pm2 start index.js --name ramadan-bot && echo '' && pm2 logs ramadan-bot --lines 15 --nostream"
 
 Write-Host ""
-Write-Host "✅ Deploy tugadi!" -ForegroundColor Green
-Write-Host "📊 Loglarni ko'rish: ssh ${serverUser}@${serverIP} 'pm2 logs 1 --lines 20'" -ForegroundColor Cyan
+Write-Host "===== Deploy tugadi! =====" -ForegroundColor Green

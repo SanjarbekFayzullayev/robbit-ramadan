@@ -70,7 +70,7 @@ const mainInlineKeyboard = Markup.inlineKeyboard([
 ]);
 
 const fullMenuKeyboard = Markup.keyboard([
-    [Markup.button.webApp("📖 Kundalikni ochish", WEB_APP_URL)],
+    ["📖 Kundalikni ochish"],
     ["🌙 Saharlik duosi", "✨ Iftorlik duosi"],
     ["✍️ Taklif va e'tirozlar", "ℹ️ Bot haqida"]
 ]).resize();
@@ -223,18 +223,18 @@ bot.command('streak', async (ctx) => {
 
         const progressPercent = totalDays > 0 ? Math.round((totalGood / (totalDays * 25)) * 100) : 0;
 
-        let msg = `🔥 *Sizning natijalaringiz:*\n\n`;
-        msg += `📅 To'ldirilgan kunlar: *${totalDays}*\n`;
-        msg += `🔥 Ketma-ketlik (streak): *${streak} kun*\n`;
-        msg += `✅ Jami yaxshiliklar: *${totalGood}*\n`;
-        msg += `⚠️ Jami kamchiliklar: *${totalBad}*\n`;
-        msg += `📊 Umumiy progress: *${progressPercent}%*\n\n`;
+        let msg = `🔥 <b>Sizning natijalaringiz:</b>\n\n`;
+        msg += `📅 To'ldirilgan kunlar: <b>${totalDays}</b>\n`;
+        msg += `🔥 Ketma-ketlik (streak): <b>${streak} kun</b>\n`;
+        msg += `✅ Jami yaxshiliklar: <b>${totalGood}</b>\n`;
+        msg += `⚠️ Jami kamchiliklar: <b>${totalBad}</b>\n`;
+        msg += `📊 Umumiy progress: <b>${progressPercent}%</b>\n\n`;
 
         if (streak >= 7) msg += `🏆 Barakallo! Ajoyib natija!`;
         else if (streak >= 3) msg += `💪 Yaxshi ketayapsiz! Davom eting!`;
         else msg += `🌱 Har bir kun yangi imkoniyat. Davom eting!`;
 
-        await ctx.reply(msg, { parse_mode: 'Markdown' });
+        await ctx.reply(msg, { parse_mode: 'HTML' });
     } catch (e) {
         console.error('streak error:', e.message);
         try { await ctx.reply("⚠️ Xatolik yuz berdi."); } catch (_) { }
@@ -245,21 +245,25 @@ bot.command('streak', async (ctx) => {
 // 8. TEXT HANDLERS
 // ==========================================
 bot.hears("📖 Kundalikni ochish", (ctx) => {
-    ctx.reply("Ramazon kundaligini ochish uchun quyidagi tugmani bosing:", mainInlineKeyboard)
-        .catch(e => console.error('diary error:', e.message));
+    ctx.reply(
+        "🌙 Ramazon kundaligiga kirish uchun pastdagi tugmani bosing 👇",
+        Markup.inlineKeyboard([
+            [Markup.button.webApp("📖 Kundalikni ochish", WEB_APP_URL)]
+        ])
+    ).catch(e => console.error('diary error:', e.message));
 });
 
 bot.hears("🌙 Saharlik duosi", (ctx) => {
     ctx.reply(
-        `🌙 *SAHARLIK DUOSI*\n\n*Navaytu an asuma sovma shahri ramazona minal fajri ilal mag'ribi, xolisan lillahi ta'ala. Allohu akbar.*\n\n_Ma'nosi:_ Ramazon oyining ro'zasini xolis Alloh uchun subhdan to kun botguncha tutmoqni niyat qildim. Alloh buyukdir.`,
-        { parse_mode: 'Markdown' }
+        `🌙 <b>SAHARLIK DUOSI</b>\n\n<b>Navaytu an asuma sovma shahri ramazona minal fajri ilal mag'ribi, xolisan lillahi ta'ala. Allohu akbar.</b>\n\n<i>Ma'nosi:</i> Ramazon oyining ro'zasini xolis Alloh uchun subhdan to kun botguncha tutmoqni niyat qildim. Alloh buyukdir.`,
+        { parse_mode: 'HTML' }
     ).catch(e => console.error('saharlik error:', e.message));
 });
 
 bot.hears("✨ Iftorlik duosi", (ctx) => {
     ctx.reply(
-        `✨ *IFTORLIK DUOSI*\n\n*Allohumma laka sumtu va bika amantu va 'alayka tavakkaltu va 'ala rizqika aftartu, fag'firli ya g'offaru ma qoddamtu va ma axxortu.*\n\n_Ma'nosi:_ Ey Alloh, ushbu ro'zamni Sen uchun tutdim va Senga iymon keltirdim va Senga tavakkal qildim va bergan rizqing bilan iftor qildim. Ey gunohlarni afv etuvchi Zot, mening avvalgi va keyingi gunohlarimni mag'firat qil.`,
-        { parse_mode: 'Markdown' }
+        `✨ <b>IFTORLIK DUOSI</b>\n\n<b>Allohumma laka sumtu va bika amantu va 'alayka tavakkaltu va 'ala rizqika aftartu, fag'firli ya g'offaru ma qoddamtu va ma axxortu.</b>\n\n<i>Ma'nosi:</i> Ey Alloh, ushbu ro'zamni Sen uchun tutdim va Senga iymon keltirdim va Senga tavakkal qildim va bergan rizqing bilan iftor qildim. Ey gunohlarni afv etuvchi Zot, mening avvalgi va keyingi gunohlarimni mag'firat qil.`,
+        { parse_mode: 'HTML' }
     ).catch(e => console.error('iftorlik error:', e.message));
 });
 
@@ -270,8 +274,8 @@ bot.hears("✍️ Taklif va e'tirozlar", (ctx) => {
 
 bot.hears("ℹ️ Bot haqida", (ctx) => {
     ctx.reply(
-        `Ushbu bot [Ikrom Sharif](https://t.me/IkromSharif/6886) ustozni kanaliga joylangan Ramazon [jadval](https://t.me/IkromSharif/6886) asosida tayyorlandi.\n\nAlloh ta'olo ushbu Ramazonni barchamizga barokatli qilsin, Alloh barchamizdan rozi bo'lsin. Omiyn!`,
-        { parse_mode: 'Markdown', disable_web_page_preview: true }
+        `Ushbu bot <a href="https://t.me/IkromSharif/6886">Ikrom Sharif</a> ustozni kanaliga joylangan Ramazon <a href="https://t.me/IkromSharif/6886">jadval</a> asosida tayyorlandi.\n\nAlloh ta'olo ushbu Ramazonni barchamizga barokatli qilsin, Alloh barchamizdan rozi bo'lsin. Omiyn!`,
+        { parse_mode: 'HTML', disable_web_page_preview: true }
     ).catch(e => console.error('about error:', e.message));
 });
 
@@ -293,7 +297,7 @@ bot.on('message', async (ctx) => {
             if (feedbackDoc.exists) {
                 const originalUser = feedbackDoc.data();
                 try {
-                    await bot.telegram.sendMessage(originalUser.chat_id, `💌 *Admindan javob keldi:*\n\n${text}`, { parse_mode: 'Markdown' });
+                    await bot.telegram.sendMessage(originalUser.chat_id, `💌 <b>Admindan javob keldi:</b>\n\n${text}`, { parse_mode: 'HTML' });
                     await ctx.reply("✅ Javobingiz foydalanuvchiga yuborildi.");
                 } catch (err) {
                     console.error("Failed to push reply:", err.message);
@@ -309,12 +313,12 @@ bot.on('message', async (ctx) => {
 
         if (!isCommand) {
             try {
-                const userInfo = `👤 *Kimdan:* ${user.first_name} ${user.last_name || ''}\n` +
-                    `🆔 *ID:* ${user.id}\n` +
-                    `🔗 *Username:* ${user.username ? '@' + user.username : 'yo\'q'}\n\n` +
-                    `💬 *Xabar:* ${text}`;
+                const userInfo = `👤 <b>Kimdan:</b> ${user.first_name || ''} ${user.last_name || ''}\n` +
+                    `🆔 <b>ID:</b> ${user.id}\n` +
+                    `🔗 <b>Username:</b> ${user.username ? '@' + user.username : 'yo\'q'}\n\n` +
+                    `💬 <b>Xabar:</b> ${text}`;
 
-                const forwardSent = await bot.telegram.sendMessage(ADMIN_ID, userInfo, { parse_mode: 'Markdown' });
+                const forwardSent = await bot.telegram.sendMessage(ADMIN_ID, userInfo, { parse_mode: 'HTML' });
 
                 await db.collection('feedback_map').doc(forwardSent.message_id.toString()).set({
                     chat_id: ctx.chat.id,
@@ -348,7 +352,7 @@ async function sendNotification(type) {
             const user = userDoc.data();
             try {
                 await bot.telegram.sendMessage(user.chat_id, settings.message, {
-                    parse_mode: 'Markdown',
+                    parse_mode: 'HTML',
                     ...mainInlineKeyboard
                 });
                 sent++;
