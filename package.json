@@ -11,15 +11,7 @@
   "description": "",
   "dependencies": {
     "dotenv": "^17.3.1",
-<<<<<<< HEAD
     "firebase-admin": "^13.6.1",
     "telegraf": "^4.16.3"
   }
 }
-=======
-    "firebase": "^12.9.0",
-    "firebase-admin": "^13.6.1",
-    "telegraf": "^4.16.3"
-  }
-}
->>>>>>> 93c7797 (Fresh start)

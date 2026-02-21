@@ -57,10 +57,16 @@ let notificationSettings = {
         hour: 20,
         minute: 0,
         message: "✨ Kun yakunlandi. Bugungi amallaringizni sarhisob qilish vaqti keldi.\n\nKundalikni to'ldirib, o'zingizni hisob-kitob qiling."
+    },
+    dailyReport: {
+        enabled: true,
+        hour: 21,
+        minute: 0
     }
 };
 let lastMorningSent = null;
 let lastEveningSent = null;
+let lastDailyReportSent = null;
 
 // ==========================================
 // 3. KEYBOARDS
@@ -83,7 +89,8 @@ db.collection('settings').doc('notifications').onSnapshot(snap => {
         const data = snap.data();
         if (data.morning) notificationSettings.morning = { ...notificationSettings.morning, ...data.morning };
         if (data.evening) notificationSettings.evening = { ...notificationSettings.evening, ...data.evening };
-        console.log(`🔄 Notifications updated: morning=${notificationSettings.morning.hour}:${String(notificationSettings.morning.minute).padStart(2, '0')}, evening=${notificationSettings.evening.hour}:${String(notificationSettings.evening.minute).padStart(2, '0')}`);
+        if (data.dailyReport) notificationSettings.dailyReport = { ...notificationSettings.dailyReport, ...data.dailyReport };
+        console.log(`🔄 Notifications updated: morning=${notificationSettings.morning.hour}:${String(notificationSettings.morning.minute).padStart(2, '0')}, evening=${notificationSettings.evening.hour}:${String(notificationSettings.evening.minute).padStart(2, '0')}, dailyReport=${notificationSettings.dailyReport.hour}:${String(notificationSettings.dailyReport.minute).padStart(2, '0')}`);
     } else {
         // Create defaults on first run
         db.collection('settings').doc('notifications').set(notificationSettings)
@@ -280,7 +287,43 @@ bot.hears("ℹ️ Bot haqida", (ctx) => {
 });
 
 // ==========================================
-// 9. FEEDBACK & ADMIN REPLY
+// 9. TEST COMMANDS (admin only) — must be before bot.on('message')
+// ==========================================
+bot.command('test_morning', async (ctx) => {
+    if (ctx.from.id !== ADMIN_ID) return;
+    try {
+        await ctx.reply("Saharlik testi yuborilmoqda...");
+        await sendNotification('morning');
+        await ctx.reply("✅ Saharlik testi yuborildi.");
+    } catch (e) {
+        console.error('test_morning error:', e.message);
+    }
+});
+
+bot.command('test_evening', async (ctx) => {
+    if (ctx.from.id !== ADMIN_ID) return;
+    try {
+        await ctx.reply("Kechki hisobot testi yuborilmoqda...");
+        await sendNotification('evening');
+        await ctx.reply("✅ Kechki hisobot testi yuborildi.");
+    } catch (e) {
+        console.error('test_evening error:', e.message);
+    }
+});
+
+bot.command('test_report', async (ctx) => {
+    if (ctx.from.id !== ADMIN_ID) return;
+    try {
+        await ctx.reply("📊 Kun hisoboti testi yuborilmoqda...");
+        await sendDailyReport();
+        await ctx.reply("✅ Kun hisoboti testi yuborildi.");
+    } catch (e) {
+        console.error('test_report error:', e.message);
+    }
+});
+
+// ==========================================
+// 10. FEEDBACK & ADMIN REPLY
 // ==========================================
 bot.on('message', async (ctx) => {
     try {
@@ -367,6 +410,94 @@ async function sendNotification(type) {
     }
 }
 
+// ==========================================
+// 10b. DAILY REPORT — Personalized per-user report
+// ==========================================
+async function sendDailyReport() {
+    const settings = notificationSettings.dailyReport;
+    if (!settings || !settings.enabled) return;
+
+    console.log('📊 Sending daily reports...');
+    try {
+        // Get current Ramadan day
+        const settingsDoc = await db.collection('settings').doc('ramadan').get();
+        const startDate = settingsDoc.exists ? settingsDoc.data().startDate : '2026-02-18';
+        const currentDay = getCurrentRamadanDay(startDate);
+
+        const usersSnapshot = await db.collection('users').get();
+        let sent = 0, failed = 0, skipped = 0;
+
+        for (const userDoc of usersSnapshot.docs) {
+            const user = userDoc.data();
+            try {
+                // Get this user's diary data
+                const userDataDoc = await db.collection('user_data').doc(userDoc.id).get();
+                const data = userDataDoc.exists ? userDataDoc.data() : {};
+
+                // Today's data
+                const todayData = data[`day${currentDay}`] || { good: [], bad: [] };
+                const goodCount = (todayData.good || []).filter(v => v).length;
+                const badCount = (todayData.bad || []).filter(v => v).length;
+
+                // Calculate streak
+                let streak = 0;
+                for (let i = currentDay; i >= 1; i--) {
+                    const dayData = data[`day${i}`];
+                    if (dayData && (dayData.good || []).filter(v => v).length > 0) {
+                        streak++;
+                    } else {
+                        break;
+                    }
+                }
+
+                // Calculate overall progress
+                let totalDays = 0, totalGood = 0;
+                for (let i = 1; i <= 30; i++) {
+                    const dayData = data[`day${i}`];
+                    if (dayData) {
+                        const gc = (dayData.good || []).filter(v => v).length;
+                        const bc = (dayData.bad || []).filter(v => v).length;
+                        if (gc > 0 || bc > 0) {
+                            totalDays++;
+                            totalGood += gc;
+                        }
+                    }
+                }
+                const progressPercent = totalDays > 0 ? Math.round((totalGood / (totalDays * 25)) * 100) : 0;
+
+                // Build personalized message
+                let msg = `📊 <b>Bugungi kun hisoboti</b> (${currentDay}-kun)\n\n`;
+
+                if (goodCount === 0 && badCount === 0) {
+                    msg += `📝 Siz bugun hali kundalikni to'ldirmadingiz.\n\n`;
+                    msg += `Kundalikni to'ldirishni unutmang! 👇`;
+                } else {
+                    msg += `✅ Yaxshiliklar: <b>${goodCount} / 25</b>\n`;
+                    msg += `⚠️ Kamchiliklar: <b>${badCount} / 25</b>\n\n`;
+                    msg += `🔥 Streak: <b>${streak} kun</b>\n`;
+                    msg += `📊 Umumiy progress: <b>${progressPercent}%</b>\n\n`;
+
+                    if (streak >= 7) msg += `🏆 Barakallo! Ajoyib natija!`;
+                    else if (streak >= 3) msg += `💪 Yaxshi ketayapsiz! Davom eting!`;
+                    else msg += `🌱 Har bir kun yangi imkoniyat. Davom eting!`;
+                }
+
+                await bot.telegram.sendMessage(user.chat_id, msg, {
+                    parse_mode: 'HTML',
+                    ...mainInlineKeyboard
+                });
+                sent++;
+            } catch (e) {
+                console.error(`  ⚠️ Daily report failed for ${userDoc.id}:`, e.message);
+                failed++;
+            }
+        }
+        console.log(`  📊 Daily report: sent=${sent}, failed=${failed}, skipped=${skipped}`);
+    } catch (e) {
+        console.error('Daily report error:', e.message);
+    }
+}
+
 // Check every minute
 setInterval(() => {
     const now = new Date();
@@ -395,6 +526,15 @@ setInterval(() => {
         lastEveningSent !== today) {
         lastEveningSent = today;
         sendNotification('evening');
+    }
+
+    // Daily Report
+    if (notificationSettings.dailyReport.enabled &&
+        tashkentHour === notificationSettings.dailyReport.hour &&
+        tashkentMinute === notificationSettings.dailyReport.minute &&
+        lastDailyReportSent !== today) {
+        lastDailyReportSent = today;
+        sendDailyReport();
     }
 }, 60 * 1000);
 
@@ -447,30 +587,6 @@ db.collection('broadcasts').where('status', '==', 'pending').onSnapshot(snapshot
     });
 }, err => console.error('Broadcast listener error:', err.message));
 
-// ==========================================
-// 12. TEST COMMANDS (admin only)
-// ==========================================
-bot.command('test_morning', async (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) return;
-    try {
-        await ctx.reply("Saharlik testi yuborilmoqda...");
-        await sendNotification('morning');
-        await ctx.reply("✅ Saharlik testi yuborildi.");
-    } catch (e) {
-        console.error('test_morning error:', e.message);
-    }
-});
-
-bot.command('test_evening', async (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) return;
-    try {
-        await ctx.reply("Kechki hisobot testi yuborilmoqda...");
-        await sendNotification('evening');
-        await ctx.reply("✅ Kechki hisobot testi yuborildi.");
-    } catch (e) {
-        console.error('test_evening error:', e.message);
-    }
-});
 
 // ==========================================
 // 13. LAUNCH
@@ -494,6 +610,7 @@ async function startBot() {
         console.log('║   📊 Project: ' + (admin.app().options.projectId || '').padEnd(24) + '║');
         console.log('║   ⏰ Morning: ' + `${notificationSettings.morning.hour}:${String(notificationSettings.morning.minute).padStart(2, '0')}`.padEnd(24) + '║');
         console.log('║   🌙 Evening: ' + `${notificationSettings.evening.hour}:${String(notificationSettings.evening.minute).padStart(2, '0')}`.padEnd(24) + '║');
+        console.log('║   📊 Report:  ' + `${notificationSettings.dailyReport.hour}:${String(notificationSettings.dailyReport.minute).padStart(2, '0')}`.padEnd(24) + '║');
         console.log('╚════════════════════════════════════════╝');
         console.log('');
     } catch (err) {
